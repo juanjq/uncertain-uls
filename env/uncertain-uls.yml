@@ -1,0 +1,29 @@
+# Main analysis environment.
+#   mamba env create -f env/uncertain-uls.yml
+#   conda activate uncertain-uls
+#   python -m ipykernel install --user --name uncertain-uls
+name: uncertain-uls
+channels:
+  - conda-forge
+dependencies:
+  - python=3.11
+  - numpy<2.3
+  - scipy
+  - matplotlib
+  - astropy
+  - healpy
+  - ligo.skymap
+  - regions<0.12        # gammapy 2.1 imports a helper removed in regions 0.12
+  - h5py
+  - pyyaml
+  - tqdm
+  - emcee
+  - corner
+  - pytest
+  - jupyterlab
+  - ipykernel
+  - nbconvert
+  - pip
+  - pip:
+      - gammapy==2.1
+      - tilepy
