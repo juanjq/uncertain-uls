@@ -117,7 +117,7 @@ def main(job_path: str) -> int:
             print(f"run {obs_id} refused: {type(e).__name__}: {e}", file=sys.stderr, flush=True)
             return REFUSED
         h = fits.getheader(paths[0], "EVENTS")
-        n_events = fits.getheader(paths[0], "EVENTS")["NAXIS2"]
+        n_events = h["NAXIS2"]
         summary.append({"obs_id": obs_id, "file": paths[0].name, "bkg_file": f"bkg_Run{obs_id:05d}.fits",
                         "source": model is not None, "n_events": int(n_events),
                         "seconds": round(time.perf_counter() - t, 1),
