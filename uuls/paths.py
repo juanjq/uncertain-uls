@@ -26,7 +26,7 @@ EBL = DATA / "ebl"
 REAL_DL3 = _env_path("UULS_REAL_DL3", DATA / "dl3_real")
 
 # simulst: separate repo and conda env, called only as a subprocess (see uuls.simdata).
-SIMULST_REPO = _env_path("UULS_SIMULST_REPO", REPO.parents[1] / "lstreco" / "simulst")
+SIMULST_REPO = _env_path("UULS_SIMULST_REPO", REPO.parent / "simulst")
 SIMULST_PYTHON = _env_path(
     "UULS_SIMULST_PYTHON",
     Path(os.environ.get("CONDA_ENVS", REPO.parents[1] / "softs" / "conda" / "envs")) / "simulst" / "bin" / "python",

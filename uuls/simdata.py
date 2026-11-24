@@ -91,10 +91,12 @@ def simulst_python() -> Path:
     """paths.SIMULST_PYTHON, or else the `simulst` env next to the running one (<envs>/simulst/bin/python)."""
     if paths.SIMULST_PYTHON.is_file():
         return paths.SIMULST_PYTHON
-    sibling = Path(sys.executable).resolve().parents[2] / "simulst" / "bin" / "python"
-    if sibling.is_file():
-        return sibling
-    raise FileNotFoundError(f"simulst python not found at {paths.SIMULST_PYTHON} nor {sibling} "
+    prefix = Path(sys.prefix)  # an env (<envs>/<name>) or the conda base (<base>, envs in <base>/envs)
+    candidates = [prefix.parent / "simulst" / "bin" / "python", prefix / "envs" / "simulst" / "bin" / "python"]
+    for sibling in candidates:
+        if sibling.is_file():
+            return sibling
+    raise FileNotFoundError(f"simulst python not found at {paths.SIMULST_PYTHON} nor in {candidates} "
                             "(set UULS_SIMULST_PYTHON)")
 
 

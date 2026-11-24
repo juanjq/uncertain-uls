@@ -94,7 +94,8 @@ def main(job_path: str) -> int:
         error_file.write_text(json.dumps({"obs_id": None, "type": "ValueError", "run": {},
                                           "message": f"unknown production {production!r}, simulst has {sorted(PRODUCTIONS)}"}))
         return REFUSED
-    max_offset = PRODUCTIONS[production].max_source_offset  # outer edge of the production's IRF offset axis
+    # older simulst Production objects have no max_source_offset: then the far_source check is a no-op
+    max_offset = getattr(PRODUCTIONS[production], "max_source_offset", None)
     library = BackgroundLibrary.read(production=production)
     print(f"production {production} (sources to {max_offset}), library {library.version}, {len(job['runs'])} runs, "
           f"nsb {nsb}, seed {seed}", flush=True)
@@ -107,7 +108,7 @@ def main(job_path: str) -> int:
         model = None
         if src is not None:
             sep = pointing.separation(SkyCoord(src["ra"] * u.deg, src["dec"] * u.deg, frame="icrs"))
-            if sep <= max_offset or far_source == "refuse":
+            if max_offset is None or sep <= max_offset or far_source == "refuse":
                 model = source_model(src)  # simulst refuses it beyond max_offset
             else:
                 print(f"run {obs_id}: source {sep.deg:.2f} deg from the pointing, beyond {max_offset}: "

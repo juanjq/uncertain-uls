@@ -86,19 +86,46 @@ def observable_time(target: SkyCoord, after, max_zenith=40.0, site="LST-1", need
     raise RuntimeError(f"target not observable within {max_days} days after {after.isot}")
 
 
-def peak_direction(skymap_path, nside=128) -> SkyCoord:
-    """Direction of the highest-probability pixel of a HEALPix skymap.
+def coarse_probability(skymap_path, nside=128) -> np.ndarray:
+    """Probability per NESTED pixel of `nside`, summed directly from the multi-order cells.
 
-    The map is first summed down to `nside` (default 128, pixels of 0.46 deg) so that the
-    answer is a region of about the LST PSF size rather than a single fine pixel.
-    In:  skymap_path (flat or multi-order HEALPix FITS), nside (power of 2).
-    Out: SkyCoord (ICRS).
+    Cells finer than `nside` are summed into their parent pixel; cells coarser than `nside`
+    spread their probability evenly over their children. The full-resolution map is never
+    built, so a multi-order skymap of NSIDE 4096 costs the same as one of NSIDE 128.
+    In:  skymap_path (multi-order HEALPix FITS, NUNIQ table), nside (power of 2).
+    Out: float array of 12 * nside**2 probabilities, summing to the map total.
     """
     import healpy as hp
     from ligo.skymap.io import read_sky_map
 
-    prob, _ = read_sky_map(str(Path(skymap_path)), moc=False, nest=True, distances=False)
-    prob = hp.ud_grade(prob, nside, order_in="NESTED", order_out="NESTED", power=-2)
-    ipix = int(np.argmax(prob))
-    ra, dec = hp.pix2ang(nside, ipix, nest=True, lonlat=True)
+    tab = read_sky_map(str(Path(skymap_path)), moc=True)
+    uniq = np.asarray(tab["UNIQ"], dtype=np.int64)
+    order = np.floor(np.log2(np.sqrt(uniq // 4))).astype(np.int64)   # HEALPix order of each cell
+    ipix = uniq - 4 * (2 ** order) ** 2                               # NESTED index at its order
+    prob = np.asarray(tab["PROBDENSITY"], float) * hp.nside2pixarea(2 ** order)
+    k = int(np.log2(nside))
+    out = np.zeros(12 * nside * nside)
+    fine = order >= k
+    np.add.at(out, ipix[fine] >> (2 * (order[fine] - k)), prob[fine])
+    for o in np.unique(order[~fine]):
+        m = (~fine) & (order == o)
+        n = 4 ** (k - o)
+        child = (ipix[m][:, None] * n + np.arange(n)[None, :]).ravel()
+        out[child] += np.repeat(prob[m] / n, n)
+    return out
+
+
+def peak_direction(skymap_path, nside=128) -> SkyCoord:
+    """Direction of the highest-probability pixel of a HEALPix skymap.
+
+    The map is summed down to `nside` (default 128, pixels of 0.46 deg) so that the answer is
+    a region of about the LST PSF size rather than a single fine pixel. Uses
+    `coarse_probability`, so the cost does not depend on the finest order of the map.
+    In:  skymap_path (multi-order HEALPix FITS), nside (power of 2).
+    Out: SkyCoord (ICRS).
+    """
+    import healpy as hp
+
+    prob = coarse_probability(skymap_path, nside)
+    ra, dec = hp.pix2ang(nside, int(np.argmax(prob)), nest=True, lonlat=True)
     return SkyCoord(ra * u.deg, dec * u.deg, frame="icrs")

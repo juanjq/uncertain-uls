@@ -1,14 +1,14 @@
-# S191216ap (GW191216_213338, GWTC-3, 340 Mpc): 90% area 480 deg2, about 24 LST fields of
-# 2.5 deg radius, entirely north of dec -25. Chosen in docs/tiling_event_candidates.md.
-# Simulated LST-1 data on a tilepy 2D tiling. The merger time is moved to the first dark
-# time after `after` with the skymap peak below 40 deg zenith; the skymap is not rotated.
+# S250328ae: 90% area 14 deg2, about 0.7 LST fields of 2.5 deg radius, peak (145.2, +11.0),
+# distance 511 ± 82 Mpc (skymap header). Simulated LST-1 data on a tilepy 2D tiling.
+# The merger time is moved to the first dark time after `after` with the skymap peak
+# below 40 deg zenith; the skymap is not rotated.
 name: sim_tiling
 gw:
-  skymap: S191216ap.fits     # GWTC-3 PE skymap, C01:Mixed, cosmo-reweighted
-  pe: S191216ap              # PE: Zenodo 8177023, IGWN-GWTC3p0-v2-GW191216_213338_PEDataRelease_mixed_cosmo.h5
+  skymap: S250328ae.fits     # copied into data/gw/skymaps/
+  pe: null                   # no standardized PE for this event in data/gw/pe_standardized yet
 t0:
   mode: observable
-  after: "2026-08-10T12:00:00"   # RA 21 h culminates near local midnight in August
+  after: "2025-03-01T00:00:00"   # S250328ae peak observable from La Palma (alt 72 deg, Sun -61 deg)
   max_zenith: 40
   target: peak
 data:
@@ -28,7 +28,7 @@ pointings:
                              # gives exposure to 2.5 deg offset (plan §10.1)
     moonDown: 90             # the Moon is not a constraint: the simulation's NSB is set by data.nsb
 analysis:
-  center: auto               # single-geometry analysis (28 x 79 deg here); the tiling is analysed
+  center: auto               # single-geometry analysis (10 x 14 deg here); the tiling is analysed
   width: auto                # field by field instead, see uuls.fields
   margin: 2.5
   fields:                    # uuls.fields: one geometry per group of pointings
