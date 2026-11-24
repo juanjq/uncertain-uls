@@ -266,15 +266,21 @@ def _sky_id(sky) -> dict:
 class PWLSkyInjector2D:
     """Strength = phi0 [cm-2 s-1 TeV-1]; position drawn on the HEALPix map inside its greedy
     `credible` region (the 2D analogue of realisations.PWLInjector2D, for several fields).
-    sky: gwmap.HealpixSkymap or a skymap path."""
+    sky: gwmap.HealpixSkymap or a skymap path. support: optional bool per pixel, intersected
+    with the credible region (e.g. the pixels inside the fields' ROI, uuls.flux_ul.roi_pixels)."""
     sky: object
     credible: float = 0.95
     index: float = 2.0
     e_ref_TeV: float = 1.0
+    support: np.ndarray | None = field(default=None, repr=False)
 
     def __post_init__(self):
         self.sky = _sky(self.sky)
-        self._cdf = healpix_cdf(self.sky, gwm.credible_levels(self.sky) <= self.credible)
+        inside = gwm.credible_levels(self.sky) <= self.credible
+        if self.support is not None:
+            self.support = np.asarray(self.support, dtype=bool)
+            inside = inside & self.support
+        self._cdf = healpix_cdf(self.sky, inside)
 
     def __call__(self, rng, strength) -> realisations.Injection:
         d = sample_healpix(self.sky, 1, rng, cdf=self._cdf)
@@ -285,8 +291,11 @@ class PWLSkyInjector2D:
                                        "amplitude": float(strength)})
 
     def describe(self) -> dict:
-        return {"kind": "pwl_sky_2d", "sky": _sky_id(self.sky), "credible": self.credible,
-                "index": self.index, "e_ref_TeV": self.e_ref_TeV}
+        d = {"kind": "pwl_sky_2d", "sky": _sky_id(self.sky), "credible": self.credible,
+             "index": self.index, "e_ref_TeV": self.e_ref_TeV}
+        if self.support is not None:     # absent without support: earlier cache keys unchanged
+            d["support"] = hashlib.sha1(np.packbits(self.support)).hexdigest()
+        return d
 
 
 @dataclass

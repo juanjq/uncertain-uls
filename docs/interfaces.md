@@ -218,13 +218,35 @@ def build_fields(case_or_pointings, dl3_dir=None, settings=None, *, skymap=None,
 def observed_lambda(fields, correlation_radius_deg=0.1, roi="observed") -> dict   # lambda, field, lambda_iy/ix, tsmax, lambda_fields
 def coverage(fields, geom_or_coords) -> np.ndarray   # number of field geometries containing each bin centre / position
 def sample_healpix(sky, n, rng, support=None) -> dict    # ra, dec, pix: pixel ~ prob, uniform inside the pixel
-class PWLSkyInjector2D(sky, credible=0.95, index=2.0)    # position on the HEALPix map, in its credible region
+class PWLSkyInjector2D(sky, credible=0.95, index=2.0, support=None)   # position on the HEALPix map, in its credible region
+                                                        # (& support, bool per pixel, e.g. flux_ul.roi_pixels)
 class PWLSkyInjector3D(sky, band_TeV, index=2.0, restrict_to_credible=None, apply_k_correction=False)
                                                         # + d from the pixel's distance ansatz (>= 1 Mpc)
 ```
 
 Case YAML (read by `build_fields`, ignored by `uuls.cases`): `analysis.fields.link_deg`, and `analysis.reduce`
 (overrides of `reduce.DEFAULT_SETTINGS`; the simulated cases set `background: fov`).
+
+## `uuls.flux_ul`
+
+Study 1, the 2D flux UL of a case end to end (data, fields, observed Lambda, background, adaptive fit,
+closure), every expensive step cached by the tool it calls. One field: `PWLInjector2D(gwmap, reduced=)`;
+several: `PWLSkyInjector2D(sky, support=roi_pixels(...))`. Both draw inside the ROI; both run through
+`realisations.run_fields`. Background, fit and closure seeds are `seed + k * SEED_STRIDE` (k = 1, 2, 3).
+
+```python
+DEFAULTS                                             # cl, index, x_lo, x_hi, n_bkg, n_scout, n_refine, max_sims, precision, n_closure, seed, ...
+def flux_ul(case, n_jobs=1, write=True, verbose=True, details=False, **options) -> dict   # writes outputs/results/1_flux_ul/<case>.json
+def flux_ul_fields(fields, injector, **budget) -> (summary dict, details)   # the chain on given fields (tests)
+def prepare(case, production="2025_2p5", index=2.0, roi="observed") -> dict  # case, dl3_dir, fields, sky, injector
+def roi_pixels(sky, fields, credible=0.95, roi="observed") -> np.ndarray     # bool per HEALPix pixel
+def roi_gw_prob(fields, sky=None, roi="observed") -> float
+def background_lambda / fit_ul / closure_lambda / flux_values / load_result
+```
+
+Result keys: case, skymap, t0, data, roi_gw_prob, n_fields, obs_ids, lambda_obs, background {n, median, p_value,
+significance}, target, amplitude / photon_flux / energy_flux {ul, lo_1sigma, hi_1sigma, lo_2sigma, hi_2sigma, unit}
+(0.6-20 TeV), log10_ul_err_dex, fit {...}, closure {frac, err, err_ul, err_tot, pull, n}, settings, timing_s.
 
 ## `uuls.ulfit`
 
