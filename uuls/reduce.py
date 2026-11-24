@@ -42,7 +42,7 @@ from gammapy.maps import Map, MapAxis, WcsGeom
 
 from . import cache
 
-VERSION = "1"  # bump when the reduction would give a different result
+VERSION = "2"  # bump when the reduction would give a different result
 
 DEFAULT_SETTINGS = {
     "e_true_tev": [0.05, 100.0],         # true-energy axis of exposure and edisp
@@ -67,7 +67,8 @@ class ReducedData:
 
     geom: 3D WcsGeom with the reco energy axis.
     stacked: MapDataset, counts, background (ring estimate or model), exposure, psf, edisp, mask_safe.
-    runs: one MapDataset per run on `geom`, named "run<obs_id>", with its own background and GTI.
+    runs: one MapDataset per run on `geom`, named "run<obs_id>", with its own background and GTI; counts,
+        background and exposure are zero outside the run's safe mask (MapDataset.to_masked).
     run_gti_s: per run, (n_intervals, 2) array of GTI start/stop in seconds since t0.
     t0: reference time (the merger).
     settings: every analysis setting used (DEFAULT_SETTINGS updated by the caller, plus binsz, energy
@@ -168,16 +169,18 @@ def _reduce_run(obs, empty: MapDataset, s: dict, exclusion: Map) -> MapDataset:
     maker = MapDatasetMaker(selection=["counts", "background", "exposure", "psf", "edisp"])
     safe = SafeMaskMaker(methods=s["safe_mask"], offset_max=s["offset_max_deg"] * u.deg)
     ds = safe.run(maker.run(empty.copy(name=name), obs), obs)
-    if s["background"] == "model":
-        return ds
     if s["background"] == "fov":
-        return FoVBackgroundMaker(method="scale", exclusion_mask=exclusion).run(ds)
-    mask = Map.from_geom(ds.counts.geom, data=np.broadcast_to(exclusion.data, ds.counts.data.shape).copy())
-    if s["ring_within_safe_mask"]:
-        mask.data &= ds.mask_safe.data
-    ring = RingBackgroundMaker(r_in=s["ring_r_in_deg"] * u.deg, width=s["ring_width_deg"] * u.deg,
-                               exclusion_mask=mask)
-    return ring.run(ds).to_map_dataset(name=name)
+        ds = FoVBackgroundMaker(method="scale", exclusion_mask=exclusion).run(ds)
+    elif s["background"] == "ring":
+        mask = Map.from_geom(ds.counts.geom, data=np.broadcast_to(exclusion.data, ds.counts.data.shape).copy())
+        if s["ring_within_safe_mask"]:
+            mask.data &= ds.mask_safe.data
+        ring = RingBackgroundMaker(r_in=s["ring_r_in_deg"] * u.deg, width=s["ring_width_deg"] * u.deg,
+                                   exclusion_mask=mask)
+        ds = ring.run(ds).to_map_dataset(name=name)
+    # counts, background and exposure set to zero outside the safe mask, so a run used on its own (per-run
+    # injection) sees the same data as its contribution to the stack
+    return ds.to_masked(name=name)
 
 
 def _from_dl3(dl3_dir: Path, geom: WcsGeom, t0: Time, s: dict) -> ReducedData:

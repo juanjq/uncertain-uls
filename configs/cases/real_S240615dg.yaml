@@ -1,0 +1,22 @@
+# The real LST-1 follow-up of S240615dg: real merger time, real DL3, pointings as observed.
+name: real_S240615dg
+gw:
+  skymap: S240615dg.fits
+  pe: S240615dg
+t0:
+  mode: real                 # DATE-OBS of the skymap, 2024-06-15T11:36:20.7 UTC
+data:
+  kind: real                 # DL3 under paths.REAL_DL3 once copied
+pointings:
+  strategy: real
+  # Placeholder: a Pointings ECSV built from the observation index of the real runs.
+  # It does not exist yet; Case.pointings() raises FileNotFoundError until it does.
+  file: real_S240615dg_pointings.ecsv
+analysis:
+  center: auto
+  width: auto
+  margin: 2.5
+  fields:                    # uuls.fields: one geometry per group of pointings
+    link_deg: 1.0
+  # No `reduce` overrides: reduce's default (ring) until the background of real data is
+  # understood (plan §10.2). The simulated cases use "fov".

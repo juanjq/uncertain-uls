@@ -10,6 +10,8 @@ Defaults: 40 x 40 bins of 0.05 deg around (RA, Dec) = (150, 30), reco energy 0.6
 in 3 bins, flat effective area 1e5 m2, Gaussian PSF of sigma 0.1 deg, diagonal energy
 dispersion, flat background of 0.05 counts per bin and energy per run, two runs of 30 min.
 """
+import sys
+from pathlib import Path
 from types import SimpleNamespace
 
 import astropy.units as u
@@ -108,3 +110,17 @@ def toy_gwmap(geom, offset_deg=(0.15, -0.1), sigma_deg=0.25, credible=0.9,
                            credible=credible, r_grid=r_grid,
                            cdf=np.broadcast_to(cdf_1d, (ny, nx, r_grid.size)).copy(),
                            cdf_valid=np.ones((ny, nx), bool), t0=T0)
+
+
+REFERENCE_REPO = Path(__file__).resolve().parents[2] / "gw-gamma-global-uls"
+
+
+def reference_simulate():
+    """The old gwuls.simulate module, for regression tests only (None if not on disk)."""
+    if not (REFERENCE_REPO / "gwuls" / "simulate.py").exists():
+        return None
+    if str(REFERENCE_REPO) not in sys.path:
+        sys.path.insert(0, str(REFERENCE_REPO))
+    from gwuls import simulate
+
+    return simulate

@@ -29,7 +29,7 @@ REAL_DL3 = _env_path("UULS_REAL_DL3", DATA / "dl3_real")
 SIMULST_REPO = _env_path("UULS_SIMULST_REPO", REPO.parents[1] / "lstreco" / "simulst")
 SIMULST_PYTHON = _env_path(
     "UULS_SIMULST_PYTHON",
-    Path(os.environ.get("CONDA_ENVS", REPO.parents[2] / "softs" / "conda" / "envs")) / "simulst" / "bin" / "python",
+    Path(os.environ.get("CONDA_ENVS", REPO.parents[1] / "softs" / "conda" / "envs")) / "simulst" / "bin" / "python",
 )
 SIMULST_IRF_ROOT = _env_path("SIMULST_IRF_ROOT", SIMULST_REPO / "data" / "irf")
 SIMULST_LIBRARY_ROOT = _env_path("SIMULST_LIBRARY_ROOT", SIMULST_REPO / "data" / "bkg_library_wiki")

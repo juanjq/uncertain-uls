@@ -17,6 +17,7 @@ Physics (as in gwuls.utils, docs/pipeline.md §3 of the old repo):
   infinite flux downstream.
 """
 from dataclasses import dataclass
+from functools import cached_property
 from pathlib import Path
 
 import astropy.units as u
@@ -51,24 +52,30 @@ class HealpixSkymap:
     distsigma: np.ndarray
     distnorm: np.ndarray
 
-    @property
+    @cached_property
     def area_sr(self) -> np.ndarray:
         return ah.nside_to_pixel_area(self.nside).to_value(u.sr)
 
-    @property
+    @cached_property
     def density(self) -> np.ndarray:
         """Probability per steradian."""
         return self.prob / self.area_sr
 
-    def lookup(self, ra_deg, dec_deg) -> np.ndarray:
-        """Index (into the pixel arrays) of the pixel containing each (ra, dec), any shape."""
+    @cached_property
+    def _sorted_starts(self):
+        """Top order, and the pixels sorted by their first NESTED index at that order."""
         level, ipix = ah.uniq_to_level_ipix(self.uniq)
         top = int(level.max())
-        start = ipix << (2 * (top - level))          # first NESTED index at the top order
+        start = ipix << (2 * (top - level))
         order = np.argsort(start)
+        return top, order, start[order]
+
+    def lookup(self, ra_deg, dec_deg) -> np.ndarray:
+        """Index (into the pixel arrays) of the pixel containing each (ra, dec), any shape."""
+        top, order, start = self._sorted_starts
         fine = ah.lonlat_to_healpix(np.asarray(ra_deg) * u.deg, np.asarray(dec_deg) * u.deg,
                                     ah.level_to_nside(top), order="nested")
-        return order[np.searchsorted(start[order], fine, side="right") - 1]
+        return order[np.searchsorted(start, fine, side="right") - 1]
 
 
 @dataclass(frozen=True, eq=False)

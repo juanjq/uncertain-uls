@@ -242,3 +242,19 @@ the full MC with a coarser grid.
 5. Study 2 parameters of interest: (E_iso, θ_core) to start, open to a better choice.
 6. simulst through its offline mode (IRFs copied from PIC, library rebuilt from the wiki data).
 7. Tool notebooks live in `studies/0_tools/`.
+
+## 10. Decisions after phase 1 (2026-11-23)
+
+1. simulst must give exposure to 2.5 deg offset (offline mode included). The 2.5 deg IRFs exist on the cluster
+   (simulst `docs/irf-2p5-report.md`) but the simulator does not use them yet. Being solved by an agent.
+2. Background: default to the run background model with a fitted normalisation; ring kept for comparison.
+   Open problem to understand deeply before real data: on real data the background must be estimated from the
+   data, and the ring absorbs part of any source, which the Monte Carlo does not reproduce (UL too low).
+3. Tiling cases: one small geometry per field, Λ = max over all fields. Overlaps need care.
+4. Tiling max zenith 55 deg (simulst refuses >= 60).
+5. Keep all simulated events (ULs may be wanted at low energy); accept the cache size.
+6. 2D injections jittered uniformly inside their bin.
+7. S191216ap PE downloaded (Zenodo 8177023, C01:Mixed).
+8. Real S240615dg pointings built from the real obs-index when the DL3 is copied.
+9. ROI = GW 95% mask ∩ observed region (exposure > 0, safe mask), for data and Monte Carlo, single- and multi-field
+   (2026-11-24; `lambda_stat.roi`, `roi="gw_mask"` keeps the reference behaviour).

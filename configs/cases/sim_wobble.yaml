@@ -1,0 +1,32 @@
+# S240615dg with simulated LST-1 data: four 20 min wobbles at 0.4 deg around the skymap peak.
+# The merger time is moved to the first dark time after `after` with the peak below 40 deg
+# zenith; the skymap is not rotated.
+name: sim_wobble
+gw:
+  skymap: S240615dg.fits
+  pe: S240615dg
+t0:
+  mode: observable
+  after: "2026-01-01T12:00:00"
+  max_zenith: 40
+  target: peak
+data:
+  kind: simulst
+  nsb: 0.14
+  seed: 1
+pointings:
+  strategy: wobble
+  start_delay: 60            # s from t0 to the first run
+  n_runs: 4
+  run_duration: 1200         # s
+  offset: 0.4                # deg
+  angles: [0, 90, 180, 270]  # deg, position angle east of north
+analysis:
+  center: auto
+  width: auto
+  margin: 2.5
+  fields:                    # uuls.fields: one geometry per group of pointings
+    link_deg: 1.0            # the four wobbles (at most 0.8 deg apart) make one field
+  reduce:                    # overrides of uuls.reduce.DEFAULT_SETTINGS
+    background: fov          # run background model, one normalisation per run fitted to the counts;
+                             # "ring" (reference) is kept selectable for comparison (plan §10.2)

@@ -8,9 +8,16 @@ giving per bin n_b ON counts and mu_b expected background counts, then
 
 This is what gwuls.simulate._TSEngine computes through gammapy's ExcessMapEstimator
 internals (`_get_convolved_maps` + `CashCountsStatistic`), written on plain arrays. The
-correlation reproduces gammapy's: each energy plane times the safe mask, convolved in
-float32 with `scipy.signal.convolve(method="fft", mode="same")` and the
-`Tophat2DKernel(r_c / binsz)` scaled to a peak of 1; ON counts rounded with `np.rint`.
+correlation reproduces gammapy's: each energy plane times the safe mask, convolved with
+`scipy.signal.convolve(method="fft", mode="same")` and the `Tophat2DKernel(r_c / binsz)`
+scaled to a peak of 1, in the input's precision, result stored as float32; ON counts
+rounded with `np.rint`.
+
+Region of interest (ROI). The maximum is taken over the bins of the GW 95% credible mask that
+are also observed: exposure summed over true energy > 0 and inside the safe mask in at least one
+reco-energy bin (`roi`, mode "observed", the default since 2026-11-24). A bin of the GW region
+without data has TS = 0 and would otherwise put a data-independent floor 2 ln p_b under Lambda.
+Mode "gw_mask" is the GW mask alone, as in the reference code.
 
 Fast path: the background does not change between realisations, so `TSPrecomputed` holds
 its correlated sum once, and the counts are summed over energy before one 2D convolution.
@@ -54,7 +61,8 @@ def _masked(cube, mask):
 
 
 def _convolve_plane(image, kernel) -> np.ndarray:
-    return convolve(np.asarray(image, dtype=np.float32), kernel, method="fft", mode="same")
+    """One plane, in the input's own precision, stored as float32 (as WcsNDMap.convolve)."""
+    return convolve(np.asarray(image), kernel, method="fft", mode="same").astype(np.float32)
 
 
 def correlate_planes(cube, kernel) -> np.ndarray:
@@ -181,3 +189,26 @@ def safe_mask_cube(dataset):
     if dataset.mask_safe:
         return np.asarray(dataset.mask_safe.data, dtype=bool)
     return None
+
+
+# --- region of interest ------------------------------------------------------------------
+
+ROI_MODES = ("observed", "gw_mask")
+
+
+def observed_region(dataset) -> np.ndarray:
+    """Bins with data: exposure summed over true energy > 0 and, if the dataset has a safe mask,
+    inside it in at least one reco-energy bin. (ny, nx) bool."""
+    expo = np.nan_to_num(np.asarray(dataset.exposure.data, dtype=float)).sum(axis=0) > 0
+    if dataset.mask_safe is not None:
+        expo &= np.asarray(dataset.mask_safe.data, dtype=bool).any(axis=0)
+    return expo
+
+
+def roi(gw_mask, dataset, mode: str = "observed") -> np.ndarray:
+    """The bins over which Lambda is maximised: GW mask & observed_region(dataset) ("observed"),
+    or the GW mask alone ("gw_mask", reference behaviour). gw_mask: (ny, nx). -> (ny, nx) bool."""
+    if mode not in ROI_MODES:
+        raise ValueError(f"roi must be one of {ROI_MODES}, got {mode!r}")
+    mask = np.asarray(gw_mask, dtype=bool)
+    return mask & observed_region(dataset) if mode == "observed" else mask.copy()
